@@ -4,6 +4,9 @@ import org.bazarPet.controller.DonorController;
 import org.bazarPet.controller.InventoryController;
 import org.bazarPet.model.Donor;
 import org.bazarPet.model.InventoryItem;
+import org.bazarPet.model.StockStatus;
+import org.bazarPet.repository.DonorRepository;
+import org.bazarPet.repository.InventoryItemRepository;
 import org.bazarPet.repository.jdbc.DatabaseConnection;
 import org.bazarPet.repository.jdbc.DonorJdbcRepository;
 import org.bazarPet.repository.jdbc.InventoryItemJdbcRepository;
@@ -12,13 +15,62 @@ import org.bazarPet.service.DonorService;
 import org.bazarPet.service.InventoryService;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
 
 public class App {
+    private static final String[] ITEM_TYPES = {
+            "Camisa", "Calça", "Calçado", "Acessório", "Livro"
+    };
+
+    private static final String[] DONORS_NAMES = {
+            "Doador 1", "Doador 2", "Doador 3"
+    };
+
+    private static final Random random = new Random();
+
+    private static List<Donor> createDonors() {
+        List<Donor> donors = new ArrayList<>();
+
+        donors.add(new Donor("João Silva", "joao@example.com", "123456789", null));
+        donors.add(new Donor("Maria Oliveira", "maria@example.com", "987654321", null));
+        donors.add(new Donor("Carlos Pereira", "carlos@example.com", "456789123", null));
+
+        return donors;
+    }
+
+    private static List<InventoryItem> generateRandomItems(List<Donor> donors, int count) {
+        List<InventoryItem> items = new ArrayList<>();
+        String[] itemTypes = {"Camisa", "Calça", "Calçado", "Acessório", "Livro"};
+        Random random = new Random();
+
+        for (int i = 0; i < count; i++) {
+            String itemType = itemTypes[random.nextInt(itemTypes.length)];
+            float price = 10 + random.nextFloat() * 90;
+            int quantity = 1 + random.nextInt(5);
+            LocalDateTime donationDate = LocalDateTime.now().minusDays(random.nextInt(30));
+            Donor donor = donors.get(random.nextInt(donors.size()));
+
+            InventoryItem item = new InventoryItem(itemType, price, quantity, donor);
+            item.setDonationDate(donationDate);
+            items.add(item);
+        }
+
+        return items;
+    }
+
+
     public static void main(String[] args) {
-        // Inicializa a conexão com o banco de dados
+        List<Donor> donors = createDonors();
+        List<InventoryItem> items = generateRandomItems(donors, 50);
         Connection connection = null;
 
+        // Conexão com o banco de dados
         try {
             connection = DatabaseConnection.connect();
             System.out.println("Checando a existência do banco de dados e tabel:");
@@ -36,40 +88,20 @@ public class App {
             DonorController donorController = new DonorController(donorService);
             InventoryController inventoryController = new InventoryController(inventoryService, donorService);
 
-            // Criar um novo doador
-            Donor newDonor1 = new Donor("Teresinha", "teh@email.com", "03299993333", null);
-            Donor newDonor2 = new Donor("Bruno", "bruh@email.com", "03299996666", null);
+            // Inserir doadores no banco de dados
+            for (Donor donor : donors) {
+                donorRepository.create(donor);
+            }
 
-            // Adiciona um novo doador usando o DonorController
-            donorController.addDonor(newDonor1);
-            donorController.addDonor(newDonor2);
+            // Inserir itens no banco de dados
+            for (InventoryItem item : items) {
+                inventoryController.addItem(item);
+            }
 
-            // Criar um novo item para o inventário
-            InventoryItem newItem0 = new InventoryItem("Camiseta", 25.00f, 1, newDonor1);
-            InventoryItem newItem1 = new InventoryItem("Calça", 50.00f, 1, newDonor2);
-            InventoryItem newItem2 = new InventoryItem("Acessórios", 80.00f, 1, null);
-
-
-            // Adiciona o item usando o InventoryController
-            inventoryController.addItem(newItem0);
-            inventoryController.addItem(newItem1);
-            inventoryController.addItem(newItem2);
-
-            // System.out.println("Item adicionado com sucesso ao inventário.");
-
-
-            // Listar todos os itens disponíveis (exemplo)
-            System.out.println("Itens disponíveis:");
-            inventoryController.getAllAvailableItems()
-                    .forEach(item -> System.out.println(
-                            item.getItemId()
-                                    + " - " + item.getItemType()
-                                    + " - " + item.getStockStatus()
-                                    + " - " + item.getQuantity()
-                    ));
-
-            String venda = inventoryController.sellItemById("LIV-20240920T202824342004300");
-            System.out.println("Status da venda: " + venda);
+            // Imprimir os itens inseridos
+            items.forEach(item -> {
+                System.out.println("Item: " + item.getItemType() + ", Doador: " + item.getDonorId());
+            });
 
             // Listar todos os itens disponíveis (exemplo)
             System.out.println("Itens disponíveis:");
@@ -89,18 +121,8 @@ public class App {
                             + " - " + donor.getEmail()
                             + " - " + donor.getDonationHistory()
             ));
-            // Listar itens doados por um doador
-            System.out.println("Itens doados por: " + newDonor1.getName());
-            inventoryService.findItemsByDonorId(newDonor1.getId()).forEach(item -> System.out.println(
-                    item.getItemId()
-                            + " - " + item.getItemType()
-                            + " - " + item.getDonor()
-                            + " - " + item.getStockStatus()
-                            + " - " + item.getQuantity()
-            ));
-
         } catch (SQLException e) {
-            System.out.println("Erro: " + e.getMessage());
+            System.out.println("Erro ao conectar ao banco de dados: " + e.getMessage());
         } finally {
             DatabaseConnection.disconnect(connection); // Sempre feche a conexão
             System.out.println("Conexão fechada com sucesso");
