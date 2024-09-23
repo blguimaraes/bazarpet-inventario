@@ -4,9 +4,6 @@ import org.bazarPet.controller.DonorController;
 import org.bazarPet.controller.InventoryController;
 import org.bazarPet.model.Donor;
 import org.bazarPet.model.InventoryItem;
-import org.bazarPet.model.StockStatus;
-import org.bazarPet.repository.DonorRepository;
-import org.bazarPet.repository.InventoryItemRepository;
 import org.bazarPet.repository.jdbc.DatabaseConnection;
 import org.bazarPet.repository.jdbc.DonorJdbcRepository;
 import org.bazarPet.repository.jdbc.InventoryItemJdbcRepository;
@@ -15,13 +12,11 @@ import org.bazarPet.service.DonorService;
 import org.bazarPet.service.InventoryService;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 
 public class App {
     private static final String[] ITEM_TYPES = {
@@ -76,11 +71,11 @@ public class App {
             System.out.println("Checando a existência do banco de dados e tabel:");
             DatabaseInitializer.initializeDatabase(connection);
 
-            // Instanciar o repositório e serviço do doador (JDBC neste caso)
+            // Instanciar o repositório e serviço do doador (JDBC)
             DonorJdbcRepository donorRepository = new DonorJdbcRepository(connection);
             DonorService donorService = new DonorService(donorRepository);
 
-            // Instanciar o repositório e serviço do inventário (JDBC neste caso)
+            // Instanciar o repositório e serviço do inventário (JDBC)
             InventoryItemJdbcRepository inventoryRepository = new InventoryItemJdbcRepository(connection, donorRepository);
             InventoryService inventoryService = new InventoryService(inventoryRepository);
 
